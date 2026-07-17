@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ipace-obd"
+version = "0.1.0"
+description = "Read HV battery data and diagnostic trouble codes from a Jaguar I-PACE over a BLE ELM327 OBD-II adapter (e.g. Veepeak OBDCheck BLE)."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "bleak>=0.22",
+    "click>=8.1",
+    "rich>=13.7",
+]
+
+[project.scripts]
+ipace-obd = "ipace_obd.cli:main"
+
+[tool.setuptools]
+packages = ["ipace_obd", "ipace_obd.pids"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
