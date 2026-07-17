@@ -22,8 +22,45 @@ from .session import IPaceSession
 console = Console()
 
 
+class CliError(RuntimeError):
+    """Raised to show a clean, friendly error message (no Python traceback)."""
+
+
 def _run(coro):
-    return asyncio.run(coro)
+    try:
+        return asyncio.run(coro)
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Interrupted.[/yellow]")
+        sys.exit(130)
+    except CliError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        sys.exit(1)
+    except TimeoutError as exc:
+        console.print(f"[red]Timed out talking to the adapter:[/red] {exc}")
+        console.print("[dim]The car may be asleep, out of range, or another app/phone is "
+                      "already connected to the dongle.[/dim]")
+        sys.exit(1)
+    except Exception as exc:  # noqa: BLE001 - translate low-level BLE errors to something readable
+        message = str(exc)
+        lowered = message.lower()
+        if "bluez" in lowered or "dbus" in lowered:
+            console.print("[red]No usable Bluetooth stack was found on this computer.[/red]")
+            console.print("[dim]On Linux, make sure BlueZ (bluetoothd) is installed and running: "
+                          "'systemctl status bluetooth'. On Windows/macOS, make sure Bluetooth is "
+                          "turned on in system settings.[/dim]")
+        elif "winrt" in lowered or "not supported" in lowered:
+            console.print(f"[red]Bluetooth backend error:[/red] {message}")
+            console.print("[dim]Make sure Bluetooth is enabled on this computer.[/dim]")
+        elif "was not found" in lowered or "device not found" in lowered or "not found" in lowered:
+            console.print(f"[red]Could not find the adapter:[/red] {message}")
+            console.print("[dim]Double-check the --address with 'ipace-obd scan', and make sure the "
+                          "dongle is plugged in and the car is awake.[/dim]")
+        else:
+            console.print(f"[red]Unexpected error:[/red] {message}")
+            console.print("[dim]Re-run with -v for a full debug log / traceback.[/dim]")
+        if "-v" in sys.argv or "--verbose" in sys.argv:
+            raise
+        sys.exit(1)
 
 
 def async_command(f):
